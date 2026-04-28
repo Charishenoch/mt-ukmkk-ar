@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    
+    <style>
+      body { margin: 0; overflow: hidden; }
+      /* Layar awal untuk memancing klik user */
+      #start-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 200; }
+      #scanning-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; color: white; z-index: 100; pointer-events: none; }
+      .hidden { display: none !important; }
+      /* Styling tombol Mulai */
+      button { padding: 15px 30px; font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 8px; border: none; background: #ff6600; color: white; margin-top: 20px; }
+    </style>
+  </head>
+  <body>
+    <div id="start-overlay">
+      <h2>Siap Scan Pin UKMKK?</h2>
+      <button id="startButton">Mulai Scan (Nyalakan Suara)</button>
+    </div>
+
+    <div id="scanning-overlay" class="hidden">Arahkan kamera ke Pin Mascot GIRI...</div>
+
+    <a-scene mindar-image="imageTargetSrc: ./assets/targets.mind;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+      
+      <a-assets>
+        <video id="mtvideo" src="./assets/ukmkk-content.mp4" preload="auto" loop="true" playsinline></video>
+      </a-assets>
+
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+      <a-entity id="target1" mindar-image-target="targetIndex: 0">
+        <a-video src="#mtvideo" width="1" height="1" position="0 0 0" rotation="0 0 0"></a-video>
+      </a-entity>
+      
+    </a-scene>
+
+    <script>
+      const targetEl = document.querySelector('#target1');
+      const video = document.querySelector('#mtvideo');
+      const startOverlay = document.querySelector('#start-overlay');
+      const scanningOverlay = document.querySelector('#scanning-overlay');
+      const startButton = document.querySelector('#startButton');
+
+      // Wajib ada interaksi klik biar browser kasih izin putar audio
+      startButton.addEventListener('click', () => {
+        startOverlay.classList.add('hidden');
+        scanningOverlay.classList.remove('hidden');
+        
+        // Trik: pancing play lalu pause instan buat unlock audio context
+        video.play().then(() => {
+          video.pause();
+        }).catch(e => console.log("Menunggu target discan..."));
+      });
+
+      // Play video saat pin terdeteksi
+      targetEl.addEventListener("targetFound", event => {
+        scanningOverlay.classList.add("hidden");
+        video.play();
+      });
+
+      // Pause video saat pin hilang dari kamera
+      targetEl.addEventListener("targetLost", event => {
+        scanningOverlay.classList.remove("hidden");
+        video.pause();
+      });
+    </script>
+  </body>
+</html>
