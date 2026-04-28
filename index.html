@@ -37,46 +37,49 @@
     </a-scene>
 
     <script>
-      const targetEl = document.querySelector('#target1');
-      const video = document.querySelector('#mtvideo');
-      const videoContainer = document.querySelector('#video-container');
-      const startOverlay = document.querySelector('#start-overlay');
-      const scanningOverlay = document.querySelector('#scanning-overlay');
-      const startButton = document.querySelector('#startButton');
+    const targetEl = document.querySelector('#target1');
+    const video = document.querySelector('#mtvideo');
+    const videoContainer = document.querySelector('#video-container');
+    const startOverlay = document.querySelector('#start-overlay');
+    const scanningOverlay = document.querySelector('#scanning-overlay');
+    const startButton = document.querySelector('#startButton');
 
-      // Status biar video ngga kerestart pas lagi asik muter terus kedetect lagi
-      let isVideoPlaying = false; 
+    let isVideoPlaying = false; 
 
-      startButton.addEventListener('click', () => {
-        startOverlay.classList.add('hidden');
-        scanningOverlay.classList.remove('hidden');
+    // 1. Klik tombol Mulai
+    startButton.addEventListener('click', () => {
+        startOverlay.style.display = 'none';
+        scanningOverlay.style.display = 'flex'; // Munculin tulisan scan
         
         video.play().then(() => {
-          video.pause();
+        video.pause();
         }).catch(e => console.log("Menunggu target discan..."));
-      });
+    });
 
-      // ALUR 1 & 2: Pas pin kedetect -> Play video (kalau belum jalan)
-      targetEl.addEventListener("targetFound", event => {
+    // 2. Pas Pin Kedetect Pertama Kali
+    targetEl.addEventListener("targetFound", event => {
         if (!isVideoPlaying) {
-          scanningOverlay.classList.add("hidden");
-          videoContainer.classList.remove("hidden");
-          video.play();
-          isVideoPlaying = true;
+        scanningOverlay.style.display = 'none'; // Ilangin tulisan scan
+        videoContainer.classList.remove('hidden'); // Munculin pop-up video
+        videoContainer.style.display = 'flex'; // Paksa muncul
+        video.play();
+        isVideoPlaying = true;
         }
-      });
+    });
 
-      // ALUR 3: Pas target ilang dari kamera -> JANGAN DIAPA-APAIN (biar video lanjut muter)
-      targetEl.addEventListener("targetLost", event => {
-        console.log("Kamera meleng, tapi video gass terus wok!");
-      });
+    // 3. Pas Kamera Meleng (INI YANG BIKIN VIDEO TAHAN BANTING)
+    targetEl.addEventListener("targetLost", event => {
+        // KOSONG MELOMPONG! 
+        // Gwe ngga naruh perintah pause() atau nyembunyiin video sama sekali di sini.
+        console.log("Kamera meleng, masa bodo video gass terus!");
+    });
 
-      // ALUR 4: Pas video tamat -> Hilangin video, balik ke mode scan
-      video.addEventListener("ended", () => {
-        videoContainer.classList.add("hidden");
-        scanningOverlay.classList.remove("hidden");
-        isVideoPlaying = false; // Reset status biar bisa scan orang lain lagi
-      });
+    // 4. Pas Video Tamat (Selesai)
+    video.addEventListener("ended", () => {
+        videoContainer.style.display = 'none'; // Sembunyiin pop-up video
+        scanningOverlay.style.display = 'flex'; // Munculin lagi tulisan scan
+        isVideoPlaying = false; // Reset biar bisa ngetrack lagi
+    });
     </script>
   </body>
 </html>
