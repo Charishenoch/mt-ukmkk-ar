@@ -8,19 +8,14 @@
     <style>
       body { margin: 0; overflow: hidden; }
       
-      /* UI Overlays */
       #start-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 200; }
       #scanning-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; color: white; z-index: 100; pointer-events: none; }
-      
-      /* Wadah Video 2D Melayang di Tengah Layar (Pop-up) */
       #video-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 150; display: flex; justify-content: center; align-items: center; }
       
-      /* Styling video biar proporsional dan ada bingkainya (ngga cemet) */
       #mtvideo { width: 85%; max-width: 400px; border-radius: 12px; border: 4px solid #ff6600; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
       
       .hidden { display: none !important; }
       
-      /* Styling tombol Mulai */
       button { padding: 15px 30px; font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 8px; border: none; background: #ff6600; color: white; margin-top: 20px; }
     </style>
   </head>
@@ -33,14 +28,12 @@
     <div id="scanning-overlay" class="hidden">Arahkan kamera ke Pin Mascot GIRI...</div>
 
     <div id="video-container" class="hidden">
-      <video id="mtvideo" src="./assets/mtvideo.mp4" controls preload="auto" loop="true" playsinline webkit-playsinline></video>
+      <video id="mtvideo" src="./assets/mtvideo.mp4" controls preload="auto" playsinline webkit-playsinline></video>
     </div>
 
     <a-scene mindar-image="imageTargetSrc: ./assets/targets.mind;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-      
       <a-entity id="target1" mindar-image-target="targetIndex: 0"></a-entity>
-      
     </a-scene>
 
     <script>
@@ -51,29 +44,38 @@
       const scanningOverlay = document.querySelector('#scanning-overlay');
       const startButton = document.querySelector('#startButton');
 
-      // Wajib ada interaksi klik biar browser kasih izin putar audio
+      // Status biar video ngga kerestart pas lagi asik muter terus kedetect lagi
+      let isVideoPlaying = false; 
+
       startButton.addEventListener('click', () => {
         startOverlay.classList.add('hidden');
         scanningOverlay.classList.remove('hidden');
         
-        // Trik unlock audio
         video.play().then(() => {
           video.pause();
         }).catch(e => console.log("Menunggu target discan..."));
       });
 
-      // Pas pin terdeteksi: Tampilkan container pop-up & Play Video
+      // ALUR 1 & 2: Pas pin kedetect -> Play video (kalau belum jalan)
       targetEl.addEventListener("targetFound", event => {
-        scanningOverlay.classList.add("hidden");
-        videoContainer.classList.remove("hidden");
-        video.play();
+        if (!isVideoPlaying) {
+          scanningOverlay.classList.add("hidden");
+          videoContainer.classList.remove("hidden");
+          video.play();
+          isVideoPlaying = true;
+        }
       });
 
-      // Pas kamera meleng dari pin: Sembunyikan pop-up & Pause Video
+      // ALUR 3: Pas target ilang dari kamera -> JANGAN DIAPA-APAIN (biar video lanjut muter)
       targetEl.addEventListener("targetLost", event => {
+        console.log("Kamera meleng, tapi video gass terus wok!");
+      });
+
+      // ALUR 4: Pas video tamat -> Hilangin video, balik ke mode scan
+      video.addEventListener("ended", () => {
         videoContainer.classList.add("hidden");
         scanningOverlay.classList.remove("hidden");
-        video.pause();
+        isVideoPlaying = false; // Reset status biar bisa scan orang lain lagi
       });
     </script>
   </body>
