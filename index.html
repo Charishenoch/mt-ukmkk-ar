@@ -8,7 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     
     <style>
-      /* Reset & Global Font */
       body { 
         margin: 0; 
         overflow: hidden; 
@@ -16,7 +15,6 @@
         color: white;
       }
       
-      /* UI Overlays dengan efek Glassmorphism (Blur) */
       #start-overlay { 
         position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
         background: rgba(15, 15, 15, 0.85); 
@@ -25,14 +23,14 @@
         z-index: 200; 
       }
       
+      /* Ubah jadi flex-direction column biar bisa nampung teks & tombol senter */
       #scanning-overlay { 
         position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
         background: rgba(0, 0, 0, 0.4); 
-        display: flex; justify-content: center; align-items: center; 
-        z-index: 100; pointer-events: none; 
+        display: flex; flex-direction: column; justify-content: center; align-items: center; 
+        z-index: 100; 
       }
 
-      /* Teks Scanning */
       .scan-text {
         background: rgba(0, 0, 0, 0.6);
         padding: 10px 24px;
@@ -41,9 +39,10 @@
         letter-spacing: 1px;
         backdrop-filter: blur(4px);
         border: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 20px;
+        pointer-events: none; /* Biar teks ga bisa diklik */
       }
       
-      /* Wadah Video Pop-up */
       #video-container { 
         position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
         background: rgba(10, 10, 10, 0.9); 
@@ -51,7 +50,6 @@
         z-index: 150; display: flex; justify-content: center; align-items: center; 
       }
       
-      /* Styling Video Elegan */
       #mtvideo { 
         width: 85%; max-width: 380px; 
         border-radius: 16px; 
@@ -59,7 +57,6 @@
         box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 30px rgba(255, 102, 0, 0.15); 
       }
       
-      /* Styling Teks Judul */
       h2 {
         font-weight: 600;
         font-size: 22px;
@@ -68,7 +65,6 @@
         text-align: center;
       }
 
-      /* Tombol Modern (Gradient & Pill Shape) */
       button { 
         padding: 14px 36px; 
         font-size: 16px; 
@@ -87,6 +83,19 @@
         transform: scale(0.95);
         box-shadow: 0 4px 10px rgba(255, 94, 0, 0.2);
       }
+
+      /* Tombol Senter Khusus */
+      #flashButton {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 10px 24px;
+        font-size: 14px;
+        box-shadow: none;
+      }
+      #flashButton.active {
+        background: rgba(255, 255, 255, 0.9);
+        color: black;
+      }
     </style>
   </head>
   <body>
@@ -97,6 +106,7 @@
 
     <div id="scanning-overlay" style="display: none;">
       <div class="scan-text">Arahkan kamera ke Pin Mascot GIRI</div>
+      <button id="flashButton">💡 Nyalakan Senter</button>
     </div>
 
     <div id="video-container" style="display: none;">
@@ -115,8 +125,10 @@
       const startOverlay = document.querySelector('#start-overlay');
       const scanningOverlay = document.querySelector('#scanning-overlay');
       const startButton = document.querySelector('#startButton');
+      const flashButton = document.querySelector('#flashButton');
 
       let isVideoPlaying = false; 
+      let isFlashOn = false;
 
       // 1. Klik tombol Mulai
       startButton.addEventListener('click', () => {
@@ -128,22 +140,76 @@
         }).catch(e => console.log("Menunggu target discan..."));
       });
 
-      // 2. Pas Pin Kedetect Pertama Kali
+      // 2. Logika Senter (Flashlight)
+      flashButton.addEventListener('click', async () => {
+        try {
+          // Cari video track yang lagi dipakai sama MindAR
+          const videoElements = document.querySelectorAll('video');
+          let activeTrack = null;
+          
+          for (let v of videoElements) {
+            if (v.srcObject && v.srcObject.getVideoTracks) {
+              const tracks = v.srcObject.getVideoTracks();
+              if (tracks.length > 0) {
+                activeTrack = tracks[0];
+                break;
+              }
+            }
+          }
+
+          if (!activeTrack) {
+            alert("Kamera belum siap, tunggu sebentar!");
+            return;
+          }
+
+          // Cek apakah HP/Browser support senter
+          const capabilities = activeTrack.getCapabilities();
+          if (!capabilities.torch) {
+            alert("Maaf, browser atau HP lu nggak support fitur senter WebAR 🙏");
+            return;
+          }
+
+          // Toggle status senter
+          isFlashOn = !isFlashOn;
+          await activeTrack.applyConstraints({
+            advanced: [{ torch: isFlashOn }]
+          });
+
+          // Ubah tampilan tombol
+          if (isFlashOn) {
+            flashButton.classList.add('active');
+            flashButton.innerHTML = "💡 Matikan Senter";
+          } else {
+            flashButton.classList.remove('active');
+            flashButton.innerHTML = "💡 Nyalakan Senter";
+          }
+
+        } catch (err) {
+          console.error("Error senter:", err);
+        }
+      });
+
+      // 3. Pas Pin Kedetect Pertama Kali
       targetEl.addEventListener("targetFound", event => {
         if (!isVideoPlaying) {
           scanningOverlay.style.display = 'none'; 
           videoContainer.style.display = 'flex'; 
           video.play();
           isVideoPlaying = true;
+          
+          // Opsional: Otomatis matiin senter pas video main biar hemat baterai
+          if (isFlashOn) {
+            flashButton.click(); 
+          }
         }
       });
 
-      // 3. Pas Kamera Meleng (Video gas terus)
+      // 4. Pas Kamera Meleng (Video gas terus)
       targetEl.addEventListener("targetLost", event => {
         console.log("Kamera meleng, video gass terus!");
       });
 
-      // 4. Pas Video Tamat (Selesai)
+      // 5. Pas Video Tamat (Selesai)
       video.addEventListener("ended", () => {
         videoContainer.style.display = 'none'; 
         scanningOverlay.style.display = 'flex'; 
